@@ -3,6 +3,7 @@ package org.couchbase.devex.service;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.couchbase.client.java.search.HighlightStyle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,12 +39,14 @@ public class SearchService {
 	public Observable<Map<String, Object>> searchFulltextFiles(String term) {
 		MatchQuery ftq = SearchQuery.match(term).fuzziness(2);
 		SearchQuery sq = new SearchQuery("file_fulltext", ftq);
-		sq.fields("binaryStoreDigest", "binaryStoreLocation");
+		sq.fields("binaryStoreDigest", "binaryStoreLocation", "binaryStoreFilename");
+		sq.highlight(HighlightStyle.HTML, "fulltext");
 		return bucket.async().query(sq).flatMap(res -> res.hits()).doOnNext(next -> System.out.println(next))
 				.map(row -> {
 					Map<String, Object> m = new HashMap<String, Object>();
 					m.put("binaryStoreDigest", row.fields().get("binaryStoreDigest"));
 					m.put("binaryStoreLocation", row.fields().get("binaryStoreLocation"));
+					m.put("binaryStoreFilename", row.fields().get("binaryStoreFilename"));
 					m.put("fragment", row.fragments().get("fulltext"));
 					return m;
 				});
